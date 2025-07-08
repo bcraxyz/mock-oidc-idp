@@ -11,4 +11,4 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Run the web service on container startup.
-CMD ["flask", "run", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["gunicorn", "--bind", "0.0.0.0:$(PORT)", "app:app"]
