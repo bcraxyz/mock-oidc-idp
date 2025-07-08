@@ -10,24 +10,18 @@ from cryptography.hazmat.backends import default_backend
 app = Flask(__name__)
 
 # --- Configuration (loaded from environment variables) ---
-PRIVATE_KEY_PEM = os.environ.get("PRIVATE_KEY_PEM")
-if not PRIVATE_KEY_PEM:
-    raise ValueError("PRIVATE_KEY_PEM environment variable not set.")
+def get_env_var(key):
+    val = os.getenv(key)
+    if not val:
+        raise RuntimeError(f"{key} environment variable not set")
+    return val
 
-# This will be the public URL of your Cloud Run service!
-ISSUER_URL = os.environ.get("ISSUER_URL") 
-if not ISSUER_URL:
-    raise ValueError("ISSUER_URL environment variable not set.")
+PRIVATE_KEY_PEM = get_env_var("PRIVATE_KEY_PEM")
+ISSUER_URL = get_env_var("ISSUER_URL")
+AUDIENCE = get_env_var("AUDIENCE")
+KEY_ID = get_env_var("KEY_ID")
 
-AUDIENCE = os.environ.get("AUDIENCE")
-if not AUDIENCE:
-    raise ValueError("AUDIENCE environment variable not set.")
-
-KEY_ID = os.environ.get("KEY_ID")
-if not KEY_ID:
-    raise ValueError("KEY_ID environment variable not set.")
-
-# Load the private key once when the app starts
+# --- Load the private key once when the app starts ---
 try:
     private_key = serialization.load_pem_private_key(
         PRIVATE_KEY_PEM.encode('utf-8'),
@@ -39,7 +33,6 @@ try:
     numbers = public_key.public_numbers()
     n_jwk = jwt.utils.base64url_encode(numbers.n.to_bytes((numbers.n.bit_length() + 7) // 8, 'big')).decode('utf-8')
     e_jwk = jwt.utils.base64url_encode(numbers.e.to_bytes((numbers.e.bit_length() + 7) // 8, 'big')).decode('utf-8')
-
 except Exception as e:
     raise ValueError(f"Failed to load private key or derive public key components: {e}")
 
@@ -66,7 +59,6 @@ OPENID_CONFIG_DATA = {
 }
 
 # --- Flask Routes ---
-
 @app.route('/.well-known/openid-configuration')
 def openid_configuration():
     return jsonify(OPENID_CONFIG_DATA)
@@ -83,13 +75,13 @@ def generate_token():
     email = req_data.get('email', f'{subject}@example.com')
     custom_role = req_data.get('role', 'user')
 
-    now = datetime.datetime.utcnow()
+    now = int(time.time())
     payload = {
         "iss": ISSUER_URL,
         "sub": subject,
         "aud": AUDIENCE,
-        "iat": int(time.time()),
-        "exp": int(time.time()) + 3600,  # Token valid for 1 hour
+        "iat": now,
+        "exp": now + 3600,  # Token valid for 1 hour
         "auth_time": int(time.time()),
         "jti": os.urandom(16).hex(),
         "email": email,
@@ -112,9 +104,14 @@ def generate_token():
     except Exception as e:
         return jsonify({"error": f"Failed to generate token: {str(e)}"}), 500
 
+@app.route('/authorize')
+def authorize_stub():
+    # For clients expecting this path in a real OIDC provider
+    return jsonify({"error": "Not implemented", "message": "This is a mock OIDC provider"}), 501
+    
 @app.route('/')
 def health_check():
-    return "Mock OIDC IdP and Token Generator is running on port 8080."
+    return jsonify({"status": "ok", "message": "Mock OIDC IdP running..."}), 200
 
 #if __name__ == '__main__':
 #    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
