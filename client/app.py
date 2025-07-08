@@ -52,7 +52,7 @@ if action == "Generate ID Token":
         st.markdown("Generate a signed ID token from the OIDC IdP server.")
         sub = st.text_input("Subject*", placeholder="test-user", help="Required. Subject claim (`sub`) in the token")
         email = st.text_input("Email*", placeholder="test-user@example.com", help="Required. Email address in the token")
-        role = st.text_input("Custom Role (Optional)", placeholder="reader", help="Optional. Custom role if necessary")
+        role = st.text_input("Custom Attribute (Optional)", placeholder="reader", help="Optional. Custom attribute e.g. role, if necessary")
         form_submit = st.form_submit_button("Submit")
 
         if form_submit:
