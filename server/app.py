@@ -71,7 +71,7 @@ def jwks_json():
 def generate_token():
     req_data = request.get_json() if request.is_json else request.args
     
-    subject = req_data.get('sub', 'default-test-subject')
+    subject = req_data.get('sub', 'test-user')
     email = req_data.get('email', f'{subject}@example.com')
     custom_role = req_data.get('role', 'user')
 
