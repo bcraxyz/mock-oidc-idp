@@ -4,7 +4,7 @@ import jwt
 import json
 
 # Streamlit app configuration
-st.set_page_config(page_title="OIDC Client", page_icon="🔐", initial_sidebar_state="auto")
+st.set_page_config(page_title="OIDC Playground", page_icon="🛠️", initial_sidebar_state="auto")
 
 # Session state configuration
 if "id_token" not in st.session_state:
@@ -12,10 +12,10 @@ if "id_token" not in st.session_state:
 
 # Sidebar settings
 with st.sidebar:
-    st.title("🔐 OIDC Client")
+    st.title("🛠️ OIDC Playground")
     oidc_url = st.text_input("OIDC Issuer URL", placeholder="https://your-oidc-idp-url")
 
-    action = st.radio("Choose Action", [
+    action = st.radio("Select OIDC Action", [
         "Get OpenID Configuration",
         "Get JWKS",
         "Generate ID Token",
@@ -51,8 +51,8 @@ if action == "Generate ID Token":
     with st.form("generate_form"):
         st.markdown("Generate a signed ID token from the OIDC IdP server.")
         sub = st.text_input("Subject*", placeholder="test-user", help="Required. Subject claim (`sub`) in the token")
-        email = st.text_input("Email*", placeholder="test-user@example.com", help="Required. Email address in the token")
-        role = st.text_input("Custom Attribute (Optional)", placeholder="reader", help="Optional. Custom attribute e.g. role, if necessary")
+        email = st.text_input("Email*", placeholder="test-user@example.com", help="Required. Email address claim in the token")
+        role = st.text_input("Custom Attribute (Optional)", placeholder="reader", help="Optional. Custom attribute claim e.g. role, could be mapped to `attribute.role` in IAM conditions")
         form_submit = st.form_submit_button("Submit")
 
         if form_submit:
@@ -85,10 +85,10 @@ if action == "Exchange ID Token with Google Cloud STS":
     with st.form("exchange_form"):
         st.markdown("Exchange an ID token for a Google Cloud access token using Security Token Service (STS).")
         token = st.text_area(
-            "ID Token*",
+            "Signed ID Token*",
             value=st.session_state.get("id_token", ""),
             height=200,
-            help="Required. Paste or reuse a previously generated ID token"
+            help="Required. Paste or reuse a previously generated signed ID token"
         )
         audience = st.text_input(
             "Google Cloud STS Audience*",
