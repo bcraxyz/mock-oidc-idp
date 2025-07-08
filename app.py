@@ -116,5 +116,5 @@ def generate_token():
 def health_check():
     return "Mock OIDC IdP and Token Generator is running on port 8080."
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+#if __name__ == '__main__':
+#    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
