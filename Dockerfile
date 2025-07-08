@@ -11,4 +11,4 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Run the web service on container startup.
-CMD ["gunicorn", "--bind", "0.0.0.0:$(PORT)", "app:app"]
+CMD gunicorn --bind 0.0.0.0:"${PORT}" app:app
