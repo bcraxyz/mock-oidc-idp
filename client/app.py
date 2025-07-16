@@ -47,12 +47,7 @@ if sidebar_submit:
                     st.json(res.json())
 
             elif action == "Get JWKS":
-                res = requests.get(f"{oidc_url}/jwks.json")
-                with st.expander("**🧾 JWKS**", expanded=True):
-                    st.json(res.json())
-
-            elif action == "List GCS Buckets":
-                res = requests.get(f"{oidc_url}/jwks.json")
+                res = requests.get(f"{oidc_url}/.well-known/jwks.json")
                 with st.expander("**🧾 JWKS**", expanded=True):
                     st.json(res.json())
 
