@@ -52,7 +52,7 @@ JWKS_DATA = {
 
 OPENID_CONFIG_DATA = {
     "issuer": ISSUER_URL,
-    "jwks_uri": f"{ISSUER_URL}/jwks.json", # jwks.json will be served by this app
+    "jwks_uri": f"{ISSUER_URL}/.well-known/jwks.json", # jwks.json will be served by this app
     "response_types_supported": ["id_token"],
     "subject_types_supported": ["public"],
     "id_token_signing_alg_values_supported": ["RS256"]
@@ -63,7 +63,7 @@ OPENID_CONFIG_DATA = {
 def openid_configuration():
     return jsonify(OPENID_CONFIG_DATA)
 
-@app.route('/jwks.json')
+@app.route('/.well-known/jwks.json')
 def jwks_json():
     return jsonify(JWKS_DATA)
 
