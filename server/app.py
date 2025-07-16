@@ -18,7 +18,8 @@ def get_env_var(key):
 
 PRIVATE_KEY_PEM = get_env_var("PRIVATE_KEY_PEM")
 ISSUER_URL = get_env_var("ISSUER_URL")
-AUDIENCE = get_env_var("AUDIENCE")
+CLIENT_ID = get_env_var("CLIENT_ID") # id_token 'aud'
+AUDIENCE = get_env_var("AUDIENCE")   # access_token 'aud'
 KEY_ID = get_env_var("KEY_ID")
 
 # --- Load the private key once when the app starts ---
@@ -52,10 +53,13 @@ JWKS_DATA = {
 
 OPENID_CONFIG_DATA = {
     "issuer": ISSUER_URL,
-    "jwks_uri": f"{ISSUER_URL}/.well-known/jwks.json", # jwks.json will be served by this app
-    "response_types_supported": ["id_token"],
+    "jwks_uri": f"{ISSUER_URL}/.well-known/jwks.json",
+    "authorization_endpoint": f"{ISSUER_URL}/authorize",
+    "token_endpoint": f"{ISSUER_URL}/token",
+    "response_types_supported": ["code", "id_token", "token id_token"],
     "subject_types_supported": ["public"],
-    "id_token_signing_alg_values_supported": ["RS256"]
+    "id_token_signing_alg_values_supported": ["RS256"],
+    "scopes_supported": ["openid", "email"],
 }
 
 # --- Flask Routes ---
@@ -67,25 +71,33 @@ def openid_configuration():
 def jwks_json():
     return jsonify(JWKS_DATA)
 
-@app.route('/generate-token', methods=['GET', 'POST'])
+@app.route('/token', methods=['POST'])
 def generate_token():
     req_data = request.get_json() if request.is_json else request.args
-    
     subject = req_data.get('sub', 'test-user')
     email = req_data.get('email', f'{subject}@example.com')
-    custom_role = req_data.get('role', 'user')
 
     now = int(time.time())
-    payload = {
+    id_payload = {
+        "iss": ISSUER_URL,
+        "sub": subject,
+        "aud": CLIENT_ID,
+        "iat": now,
+        "exp": now + 3600,  # Token valid for 1 hour
+        "auth_time": int(time.time()),
+        "jti": os.urandom(16).hex()
+    }
+    if email:
+        id_payload["email"] = email
+
+    access_payload = {
         "iss": ISSUER_URL,
         "sub": subject,
         "aud": AUDIENCE,
         "iat": now,
         "exp": now + 3600,  # Token valid for 1 hour
         "auth_time": int(time.time()),
-        "jti": os.urandom(16).hex(),
-        "email": email,
-        "https://example.com/custom_role": custom_role
+        "jti": os.urandom(16).hex()
     }
 
     headers = {
@@ -94,15 +106,26 @@ def generate_token():
     }
 
     try:
-        encoded_jwt = jwt.encode(
-            payload,
+        id_token = jwt.encode(
+            id_payload,
             private_key,
             algorithm="RS256",
             headers=headers
         )
-        return jsonify({"id_token": encoded_jwt, "subject": subject}), 200
+        access_token = jwt.encode(
+            access_payload, 
+            private_key, 
+            algorithm="RS256", 
+            headers=headers
+        )
+        return jsonify({
+          "access_token": access_token,
+          "id_token": id_token,
+          "token_type": "Bearer",
+          "expires_in": 3600
+        }), 200
     except Exception as e:
-        return jsonify({"error": f"Failed to generate token: {str(e)}"}), 500
+        return jsonify({"error": f"Failed to generate tokens: {str(e)}"}), 500
 
 @app.route('/authorize')
 def authorize_stub():
@@ -113,5 +136,5 @@ def authorize_stub():
 def health_check():
     return jsonify({"status": "ok", "message": "Mock OIDC IdP running..."}), 200
 
-#if __name__ == '__main__':
-#    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
