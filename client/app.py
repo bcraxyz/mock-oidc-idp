@@ -59,30 +59,44 @@ if action == "Generate ID Token":
     with st.form("generate_form"):
         st.markdown("Generate a signed ID token from the OIDC IdP server.")
         sub = st.text_input("Subject*", placeholder="gcs-sa", help="Required. Subject claim (`sub`) in the token")
-        email = st.text_input("Email*", placeholder="gcs-sa@your-project-id.iam.gserviceaccount.com", help="Required. Email address claim in the token")
-        role = st.text_input("Custom Attribute (Optional)", placeholder="reader", help="Optional. Custom attribute claim e.g. role, could be mapped to `attribute.role` in IAM conditions")
+        email = st.text_input("Email", placeholder="gcs-sa@your-project-id.iam.gserviceaccount.com", help="Optional. Email address claim in the token")
         form_submit = st.form_submit_button("Submit")
 
         if form_submit:
             if not oidc_url.strip():
                 st.error("OIDC Issuer URL is required.")
-            elif not sub.strip() or not email.strip():
-                st.error("Both Subject and Email are required.")
+            elif not sub.strip():
+                st.error("Subject is required.")
             else:
                 try:
-                    res = requests.post(f"{oidc_url}/generate-token", json={
-                        "sub": sub.strip(),
-                        "email": email.strip(),
-                        "role": role.strip()
-                    })
+                    payload = {"sub": sub.strip()}
+                    if email.strip():
+                        payload["email"] = email.strip()
+                    res = requests.post(f"{oidc_url}/token", json=payload)
+                    
                     if res.status_code == 200:
                         id_token = res.json()["id_token"]
+                        access_token = res.json()["access_token"]
                         st.session_state["id_token"] = id_token  # Cache the token
-                        with st.expander("🔑 **Raw ID Token**", expanded=True):
-                            st.code(id_token, language="none")
-                        with st.expander("🔍 **Decoded Claims**", expanded=True):
-                            decoded = jwt.decode(id_token, options={"verify_signature": False})
-                            st.json(decoded)
+
+                        if id_token:
+                            with st.expander("🔑 **Raw ID Token**", expanded=True):
+                                st.code(id_token, language="none")
+                            with st.expander("🔍 **Decoded ID Token Claims**", expanded=True):
+                                try:
+                                    decoded_id = jwt.decode(id_token, options={"verify_signature": False})
+                                    st.json(decoded_id)
+                                except Exception as e:
+                                    st.warning("Could not decode ID token: {e}")
+                        if access_token:
+                            with st.expander("🔑 **Raw Access Token**", expanded=False):
+                                st.code(access_token, language="none")
+                            with st.expander("🔍 **Decoded Access Token Claims**", expanded=False):
+                                try:
+                                    decoded_access = jwt.decode(access_token, options={"verify_signature": False})
+                                    st.json(decoded_access)
+                                except Exception as e:
+                                    st.warning(f"Could not decode access token: {e}")
                     else:
                         st.error(f"Failed with status {res.status_code}")
                         st.json(res.json())
