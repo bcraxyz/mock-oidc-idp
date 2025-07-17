@@ -74,8 +74,8 @@ def jwks_json():
 @app.route('/token', methods=['POST'])
 def generate_token():
     req_data = request.get_json() if request.is_json else request.args
-    subject = req_data.get('sub', 'test-user')
-    email = req_data.get('email', f'{subject}@example.com')
+    subject = req_data.get('sub')
+    email = req_data.get('email')
 
     now = int(time.time())
     id_payload = {
