@@ -1,7 +1,7 @@
-import streamlit as st
-import requests
 import jwt
 import json
+import requests
+import streamlit as st
 
 # Streamlit app configuration
 st.set_page_config(page_title="OIDC Playground", page_icon="🛠️", initial_sidebar_state="auto")
@@ -9,12 +9,14 @@ st.set_page_config(page_title="OIDC Playground", page_icon="🛠️", initial_si
 # Session state configuration
 if "id_token" not in st.session_state:
     st.session_state["id_token"] = ""
-
 if "federated_token" not in st.session_state:
     st.session_state["federated_token"] = ""
-
 if "sa_access_token" not in st.session_state:
     st.session_state["sa_access_token"] = ""
+if "openid_config" not in st.session_state:
+    st.session_state["openid_config"] = None
+if "jwks_uri" not in st.session_state:
+    st.session_state["jwks_uri"] = ""
 
 # Sidebar settings
 with st.sidebar:
@@ -43,14 +45,23 @@ if sidebar_submit:
         try:
             if action == "Get OpenID Configuration":
                 res = requests.get(f"{oidc_url}/.well-known/openid-configuration")
+                res.raise_for_status()
+                st.session_state["openid_config"] = res.json()
+                st.session_state["jwks_uri"] = res.json().get("jwks_uri", "")
                 with st.expander("**🧾 OpenID Configuration**", expanded=True):
-                    st.json(res.json())
+                    st.json(st.session_state["openid_config"])
 
             elif action == "Get JWKS":
-                res = requests.get(f"{oidc_url}/.well-known/jwks.json")
+                jwks_url = st.session_state.get("jwks_uri")
+                if not jwks_url:
+                    jwks_url = f"{oidc_url}/.well-known/jwks.json"
+                res = requests.get(jwks_url)
+                res.raise_for_status()
                 with st.expander("**🧾 JWKS**", expanded=True):
                     st.json(res.json())
 
+        except requests.exceptions.HTTPError as e:
+            st.error(f"HTTP Error: {e.response.status_code} - {e.response.text}")
         except Exception as e:
             st.error(f"Error: {e}")
 
